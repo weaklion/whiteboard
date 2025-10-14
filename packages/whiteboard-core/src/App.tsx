@@ -7,18 +7,30 @@ import { EditableText } from "./entities/text/ui/EditableText";
 function App() {
   const [tool, setTool] = useState("brush");
   const [lines, setLines] = useState<{ tool: string; points: number[] }[]>([]);
-  const [texts, setTexts] = useState<{ points: number[] }[]>([]);
+  const [texts, setTexts] = useState<{ points: number[]; select: boolean }[]>(
+    []
+  );
   const isDrawing = useRef(false);
+  /**
+   *
+   * tool === default 일시 stage에서 group select를 할 수 있어야 한다
+   * 선택한 게 Text고, 하나 만 선택했을 시 수정 가능하도록 해야함.
+   * https://konvajs.org/docs/select_and_transform/Basic_demo.html 참조
+   */
 
   const handleMouseDown = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
-    const pos = e.target.getStage()?.getPointerPosition();
+    const target = e.target;
+    const pos = target.getStage()?.getPointerPosition();
+
     if (pos) {
       if (tool === "brush" || tool === "eraser") {
         isDrawing.current = true;
         setLines([...lines, { tool, points: [pos.x, pos.y] }]);
       } else if (tool === "text") {
-        setTexts([...texts, { points: [pos.x, pos.y] }]);
+        setTexts([...texts, { points: [pos.x, pos.y], select: false }]);
         setTool("default");
+      } else if (tool === "default") {
+        console.log("");
       }
     }
   };
@@ -84,7 +96,12 @@ function App() {
             />
           ))}
           {texts.map((text, i) => (
-            <EditableText key={i} points={text.points} />
+            <EditableText
+              key={i}
+              id={i}
+              points={text.points}
+              select={text.select}
+            />
           ))}
         </Layer>
       </Stage>

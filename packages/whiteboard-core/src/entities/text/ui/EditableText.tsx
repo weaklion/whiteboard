@@ -1,186 +1,108 @@
 import { Text, Transformer } from "react-konva";
 import { Html } from "react-konva-utils";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  type ChangeEvent,
-  type KeyboardEvent,
-  type CompositionEvent,
-  useMemo,
-} from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 import type Konva from "konva";
 
-// const TextEditor = ({
-//   x,
-//   y,
-//   value,
-//   width,
-//   onClose,
-//   onChange,
-// }: {
-//   x: number;
-//   y: number;
-//   value: string;
-//   width: number;
-//   onClose: () => void;
-//   onChange: (text: string) => void;
-// }) => {
-//   const [text, setText] = useState(value);
+const TextEditor = ({
+  textNode,
+  onClose,
+  onChange,
+}: {
+  textNode: Konva.Text;
+  onClose: () => void;
+  onChange: (text: string) => void;
+}) => {
+  const setTextareaRef = useCallback(
+    (node: HTMLTextAreaElement | null) => {
+      if (node) {
+        const textarea = node;
 
-//   const { isComposing, keyComposingEvents } = useKeyComposing();
+        const textPosition = textNode.position();
+        const areaPosition = {
+          x: textPosition.x,
+          y: textPosition.y,
+        };
 
-//   const style = useMemo(() => {
-//     const isFirefox = navigator.userAgent.toLowerCase().indexOf("firefox") > -1;
-//     const baseStyle = {
-//       width: `${width}px`,
-//       border: "none",
-//       padding: "0px",
-//       margin: "0px",
-//       background: "none",
-//       outline: "none",
-//       resize: "none" as const,
-//       color: "black", // colour -> color
-//       fontSize: "24px",
-//       fontFamily: "sans-serif",
-//     };
+        // Match styles with the text node
+        textarea.value = textNode.text();
+        textarea.style.position = "absolute";
+        textarea.style.top = `${areaPosition.y}px`;
+        textarea.style.left = `${areaPosition.x}px`;
+        textarea.style.width = `${textNode.width() - textNode.padding() * 2}px`;
+        textarea.style.height = `${textNode.height() - textNode.padding() * 2 + 5}px`;
+        textarea.style.fontSize = `${textNode.fontSize()}px`;
+        textarea.style.border = "none";
+        textarea.style.padding = "0px";
+        textarea.style.margin = "0px";
+        textarea.style.overflow = "hidden";
+        textarea.style.background = "none";
+        textarea.style.outline = "none";
+        textarea.style.resize = "none";
+        textarea.style.fontFamily = textNode.fontFamily();
+        textarea.style.transformOrigin = "left top";
+        textarea.style.textAlign = textNode.align();
+        textarea.style.color = "black";
 
-//     if (isFirefox) {
-//       return baseStyle;
-//     }
+        const rotation = textNode.rotation();
+        let transform = "";
+        if (rotation) {
+          transform += `rotateZ(${rotation}deg)`;
+        }
+        textarea.style.transform = transform;
 
-//     return {
-//       ...baseStyle,
-//       marginTop: "-4px", // margintop -> marginTop
-//     };
-//   }, [width]);
+        textarea.style.height = "auto";
+        textarea.style.height = `${textarea.scrollHeight + 3}px`;
 
-//   const handleTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-//     if (!isComposing) {
-//       setText(e.currentTarget.value);
-//     }
-//   };
+        textarea.focus();
 
-//   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-//     if (e.key === "Enter" && !e.shiftKey) {
-//       e.preventDefault();
-//       onChange(text);
-//       onClose();
-//     }
-//     if (e.key === "Escape") {
-//       onChange(text);
-//       onClose();
-//     }
-//   };
+        const handleOutsideClick = (e: PointerEvent) => {
+          if (e.target !== textarea) {
+            onChange(textarea.value);
+            onClose();
+          }
+        };
 
-//   return (
-//     <Html groupProps={{ x, y }} divProps={{ style: { opacity: 1 } }}>
-//       <textarea
-//         value={text}
-//         onChange={handleTextChange}
-//         onKeyDown={handleKeyDown}
-//         style={style}
-//         autoFocus
-//         {...keyComposingEvents}
-//       />
-//     </Html>
-//   );
-// };
+        // Add event listeners
+        const handleKeyDown = (e: KeyboardEvent) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            onChange(textarea.value);
+            onClose();
+          }
+          if (e.key === "Escape") {
+            onClose();
+          }
+        };
 
-const TextEditor = ({ textNode, onClose, onChange }) => {
-  const textareaRef = useRef(null);
+        const handleInput = () => {
+          const scale = textNode.getAbsoluteScale().x;
+          textarea.style.width = `${textNode.width() * scale}px`;
+          textarea.style.height = "auto";
+          textarea.style.height = `${textarea.scrollHeight + textNode.fontSize()}px`;
+        };
 
-  useEffect(() => {
-    if (!textareaRef.current) return;
+        textarea.addEventListener("keydown", handleKeyDown);
+        textarea.addEventListener("input", handleInput);
+        setTimeout(() => {
+          window.addEventListener("click", handleOutsideClick);
+        });
 
-    const textarea = textareaRef.current;
-    const stage = textNode.getStage();
-    const textPosition = textNode.position();
-    const stageBox = stage.container().getBoundingClientRect();
-    const areaPosition = {
-      x: textPosition.x,
-      y: textPosition.y,
-    };
-
-    // Match styles with the text node
-    textarea.value = textNode.text();
-    textarea.style.position = "absolute";
-    textarea.style.top = `${areaPosition.y}px`;
-    textarea.style.left = `${areaPosition.x}px`;
-    textarea.style.width = `${textNode.width() - textNode.padding() * 2}px`;
-    textarea.style.height = `${textNode.height() - textNode.padding() * 2 + 5}px`;
-    textarea.style.fontSize = `${textNode.fontSize()}px`;
-    textarea.style.border = "none";
-    textarea.style.padding = "0px";
-    textarea.style.margin = "0px";
-    textarea.style.overflow = "hidden";
-    textarea.style.background = "none";
-    textarea.style.outline = "none";
-    textarea.style.resize = "none";
-    textarea.style.lineHeight = textNode.lineHeight();
-    textarea.style.fontFamily = textNode.fontFamily();
-    textarea.style.transformOrigin = "left top";
-    textarea.style.textAlign = textNode.align();
-    textarea.style.color = textNode.fill();
-
-    const rotation = textNode.rotation();
-    let transform = "";
-    if (rotation) {
-      transform += `rotateZ(${rotation}deg)`;
-    }
-    textarea.style.transform = transform;
-
-    textarea.style.height = "auto";
-    textarea.style.height = `${textarea.scrollHeight + 3}px`;
-
-    textarea.focus();
-
-    const handleOutsideClick = (e) => {
-      if (e.target !== textarea) {
-        onChange(textarea.value);
-        onClose();
+        return () => {
+          textarea.removeEventListener("keydown", handleKeyDown);
+          textarea.removeEventListener("input", handleInput);
+          window.removeEventListener("click", handleOutsideClick);
+        };
       }
-    };
-
-    // Add event listeners
-    const handleKeyDown = (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        onChange(textarea.value);
-        onClose();
-      }
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    const handleInput = () => {
-      const scale = textNode.getAbsoluteScale().x;
-      textarea.style.width = `${textNode.width() * scale}px`;
-      textarea.style.height = "auto";
-      textarea.style.height = `${textarea.scrollHeight + textNode.fontSize()}px`;
-    };
-
-    textarea.addEventListener("keydown", handleKeyDown);
-    textarea.addEventListener("input", handleInput);
-    setTimeout(() => {
-      window.addEventListener("click", handleOutsideClick);
-    });
-
-    return () => {
-      textarea.removeEventListener("keydown", handleKeyDown);
-      textarea.removeEventListener("input", handleInput);
-      window.removeEventListener("click", handleOutsideClick);
-    };
-  }, [textNode, onChange, onClose]);
+    },
+    [textNode, onChange, onClose]
+  );
 
   return (
     <Html>
       <textarea
-        ref={textareaRef}
+        ref={setTextareaRef}
         style={{
           minHeight: "1em",
           position: "absolute",
@@ -190,7 +112,15 @@ const TextEditor = ({ textNode, onClose, onChange }) => {
   );
 };
 
-export const EditableText = ({ points }: { points: number[] }) => {
+export const EditableText = ({
+  points,
+  select,
+  id,
+}: {
+  points: number[];
+  select: boolean;
+  id: number;
+}) => {
   const [text, setText] = useState("대충 이런 글씨");
   const [isEditing, setIsEditing] = useState(false);
   const [textWidth, setTextWidth] = useState(200);
@@ -204,7 +134,9 @@ export const EditableText = ({ points }: { points: number[] }) => {
   }, [isEditing]);
 
   const handleTextDblClick = useCallback(() => {
-    setIsEditing(true);
+    if (select) {
+      setIsEditing(true);
+    }
   }, []);
 
   const handleTextChange = useCallback((newText: string) => {
@@ -212,21 +144,24 @@ export const EditableText = ({ points }: { points: number[] }) => {
   }, []);
 
   const handleTransform = useCallback(() => {
-    const node = textRef.current;
-    if (node) {
-      const scaleX = node.scaleX();
-      const newWidth = node.width() * scaleX;
-      setTextWidth(newWidth);
-      node.setAttrs({
-        width: newWidth,
-        scaleX: 1,
-      });
+    if (select) {
+      const node = textRef.current;
+      if (node) {
+        const scaleX = node.scaleX();
+        const newWidth = node.width() * scaleX;
+        setTextWidth(newWidth);
+        node.setAttrs({
+          width: newWidth,
+          scaleX: 1,
+        });
+      }
     }
   }, []);
 
   return (
     <>
       <Text
+        id={`text_${id}`}
         ref={textRef}
         text={text}
         x={points[0]}
@@ -239,23 +174,27 @@ export const EditableText = ({ points }: { points: number[] }) => {
         onTransform={handleTransform}
         visible={!isEditing}
       />
-      {isEditing &&
-        textRef.current && ( // textRef.current가 있을 때만 렌더링
-          <TextEditor
-            textNode={textRef.current}
-            onChange={handleTextChange}
-            onClose={() => setIsEditing(false)}
-          />
-        )}
-      {!isEditing && (
-        <Transformer
-          ref={trRef}
-          enabledAnchors={["middle-left", "middle-right"]}
-          boundBoxFunc={(oldBox, newBox) => ({
-            ...newBox,
-            width: Math.max(30, newBox.width),
-          })}
-        />
+      {select ?? (
+        <>
+          {isEditing &&
+            textRef.current && ( // textRef.current가 있을 때만 렌더링
+              <TextEditor
+                textNode={textRef.current}
+                onChange={handleTextChange}
+                onClose={() => setIsEditing(false)}
+              />
+            )}
+          {!isEditing && (
+            <Transformer
+              ref={trRef}
+              enabledAnchors={["middle-left", "middle-right"]}
+              boundBoxFunc={(_, newBox) => ({
+                ...newBox,
+                width: Math.max(30, newBox.width),
+              })}
+            />
+          )}
+        </>
       )}
     </>
   );

@@ -1,60 +1,262 @@
-import { useRef, useState } from "react";
-import { Stage, Layer, Line } from "react-konva";
+import { useEffect, useRef, useState } from "react";
+import { Stage, Layer, Line, Transformer, Rect } from "react-konva";
 
 import type { KonvaEventObject } from "konva/lib/Node";
 import { EditableText } from "./entities/text/ui/EditableText";
+import Konva from "konva";
+
+// Helper functions for calculating bounding boxes of rotated rectangles
+const degToRad = (angle) => (angle / 180) * Math.PI;
+
+const getCorner = (pivotX, pivotY, diffX, diffY, angle) => {
+  const distance = Math.sqrt(diffX * diffX + diffY * diffY);
+  angle += Math.atan2(diffY, diffX);
+  const x = pivotX + distance * Math.cos(angle);
+  const y = pivotY + distance * Math.sin(angle);
+  return { x, y };
+};
+
+const getClientRect = (element) => {
+  const { x, y, width, height, rotation = 0 } = element;
+  const rad = degToRad(rotation);
+
+  const p1 = getCorner(x, y, 0, 0, rad);
+  const p2 = getCorner(x, y, width, 0, rad);
+  const p3 = getCorner(x, y, width, height, rad);
+  const p4 = getCorner(x, y, 0, height, rad);
+
+  const minX = Math.min(p1.x, p2.x, p3.x, p4.x);
+  const minY = Math.min(p1.y, p2.y, p3.y, p4.y);
+  const maxX = Math.max(p1.x, p2.x, p3.x, p4.x);
+  const maxY = Math.max(p1.y, p2.y, p3.y, p4.y);
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
+};
 
 function App() {
   const [tool, setTool] = useState("brush");
   const [lines, setLines] = useState<{ tool: string; points: number[] }[]>([]);
-  const [texts, setTexts] = useState<{ points: number[]; select: boolean }[]>(
-    []
-  );
+  const [texts, setTexts] = useState<
+    { id: string; points: number[]; select: boolean }[]
+  >([]);
+  const [rectangles, setRectangles] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectionRectangle, setSelectionRectangle] = useState({
+    visible: false,
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 0,
+  });
+  const isSelecting = useRef(false);
+  const transformerRef = useRef(null);
+  const rectRefs = useRef(new Map());
+
   const isDrawing = useRef(false);
-  /**
-   *
-   * tool === default 일시 stage에서 group select를 할 수 있어야 한다
-   * 선택한 게 Text고, 하나 만 선택했을 시 수정 가능하도록 해야함.
-   * https://konvajs.org/docs/select_and_transform/Basic_demo.html 참조
-   */
+
+  useEffect(() => {
+    console.log(selectedIds, "select");
+    if (selectedIds.length && transformerRef.current) {
+      const nodes = selectedIds
+        .map((id) => rectRefs.current.get(id))
+        .filter((node) => node);
+
+      transformerRef.current.nodes(nodes);
+    } else if (transformerRef.current) {
+      //clear selection
+      transformerRef.current.nodes([]);
+    }
+  }, [selectedIds]);
+
+  const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
+    // If we are selecting with rect, do nothing
+    if (selectionRectangle.visible) {
+      return;
+    }
+
+    // If click on empty area - remove all selectisons
+    if (e.target === e.target.getStage()) {
+      setSelectedIds([]);
+      return;
+    }
+    // Do nothing if clicked NOT on our rectangles
+    if (!e.target.hasName("rect")) {
+      return;
+    }
+
+    const clickedId = e.target.id();
+    // Do we pressed shift or ctrl?
+
+    const metaPressed = e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey;
+    const isSelected = selectedIds.includes(clickedId);
+
+    if (!metaPressed && !isSelected) {
+      // If no key pressed and the node is not selected
+      // select just one
+      setSelectedIds([clickedId]);
+    } else if (metaPressed && isSelected) {
+      // If we pressed keys and node was selected
+      // we need to remove it from selection
+      setSelectedIds(selectedIds.filter((id) => id !== clickedId));
+    } else if (metaPressed && !isSelected) {
+      // Add the node into selection
+      setSelectedIds([...selectedIds, clickedId]);
+    }
+  };
 
   const handleMouseDown = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
-    const target = e.target;
-    const pos = target.getStage()?.getPointerPosition();
+    if (tool === "default") {
+      if (e.target !== e.target.getStage()) {
+        return;
+      }
 
-    if (pos) {
-      if (tool === "brush" || tool === "eraser") {
-        isDrawing.current = true;
-        setLines([...lines, { tool, points: [pos.x, pos.y] }]);
-      } else if (tool === "text") {
-        setTexts([...texts, { points: [pos.x, pos.y], select: false }]);
-        setTool("default");
-      } else if (tool === "default") {
-        console.log("");
+      isSelecting.current = true;
+      const pos = e.target.getStage().getPointerPosition();
+      if (pos) {
+        setSelectionRectangle({
+          visible: true,
+          x1: pos.x,
+          y1: pos.y,
+          x2: pos.x,
+          y2: pos.y,
+        });
+      }
+    } else {
+      const pos = e.target.getStage()?.getPointerPosition();
+      if (pos) {
+        if (tool === "brush" || tool === "eraser") {
+          isDrawing.current = true;
+          setLines([...lines, { tool, points: [pos.x, pos.y] }]);
+        } else if (tool === "text") {
+          const newId = `text_${texts.length}`;
+          setTexts([
+            ...texts,
+            { id: newId, points: [pos.x, pos.y], select: false },
+          ]);
+          setTool("default");
+        }
       }
     }
   };
 
   const handleMouseMove = (e: KonvaEventObject<TouchEvent | MouseEvent>) => {
-    if (!isDrawing.current) {
-      return;
+    if (tool === "default") {
+      if (!isSelecting.current) {
+        return;
+      }
+
+      const pos = e.target?.getStage()?.getPointerPosition();
+      if (pos) {
+        setSelectionRectangle({
+          ...selectionRectangle,
+          x2: pos.x,
+          y2: pos.y,
+        });
+      }
+    } else {
+      if (!isDrawing.current) {
+        return;
+      }
+
+      const stage = e.target.getStage();
+      const point = stage?.getPointerPosition();
+
+      const lastLine = lines[lines.length - 1];
+      if (point) {
+        lastLine.points = lastLine.points.concat([point.x, point.y]);
+      }
+
+      // replace last
+      lines.splice(lines.length - 1, 1, lastLine);
+      setLines(lines.concat());
     }
-
-    const stage = e.target.getStage();
-    const point = stage?.getPointerPosition();
-
-    const lastLine = lines[lines.length - 1];
-    if (point) {
-      lastLine.points = lastLine.points.concat([point.x, point.y]);
-    }
-
-    // replace last
-    lines.splice(lines.length - 1, 1, lastLine);
-    setLines(lines.concat());
   };
 
   const handleMouseUp = () => {
-    isDrawing.current = false;
+    if (tool === "default") {
+      if (!isSelecting.current) {
+        return;
+      }
+      isSelecting.current = false;
+      // Update visibility in timeout, so we can check it in click event
+
+      setTimeout(() => {
+        setSelectionRectangle({
+          ...selectionRectangle,
+          visible: false,
+        });
+      });
+
+      const selBox = {
+        x: Math.min(selectionRectangle.x1, selectionRectangle.x2),
+        y: Math.min(selectionRectangle.y1, selectionRectangle.y2),
+        width: Math.abs(selectionRectangle.x2 - selectionRectangle.x1),
+        height: Math.abs(selectionRectangle.y2 - selectionRectangle.y1),
+      };
+
+      const selected = rectangles.filter((rect) => {
+        // Check if rectangle intersects with selection box
+        return Konva.Util.haveIntersection(selBox, getClientRect(rect));
+      });
+
+      console.log(selected, "selected");
+
+      setSelectedIds(selected.map((rect) => rect.id));
+    } else {
+      isDrawing.current = false;
+    }
+  };
+
+  const handleDragEnd = (e: KonvaEventObject<DragEvent>) => {
+    const id = e.target.id();
+    setRectangles((prevRects) => {
+      const newRects = [...prevRects];
+      const index = newRects.findIndex((r) => r.id === id);
+      if (index !== -1) {
+        newRects[index] = {
+          ...newRects[index],
+          x: e.target.x(),
+          y: e.target.y(),
+        };
+      }
+      return newRects;
+    });
+  };
+
+  const handleTransformEnd = (e: KonvaEventObject<Event>) => {
+    const id = e.target.id();
+    const node = e.target;
+
+    setRectangles((prevRects) => {
+      const newRects = [...prevRects];
+
+      // Update each transformed node
+      const index = newRects.findIndex((r) => r.id === id);
+
+      if (index !== -1) {
+        const scaleX = node.scaleX();
+        const scaleY = node.scaleY();
+        // Reset scale
+        node.scaleX(1);
+        node.scaleY(1);
+
+        newRects[index] = {
+          ...newRects[index],
+          x: node.x(),
+          y: node.y(),
+          width: Math.max(5, node.width() * scaleX),
+          height: Math.max(node.height() * scaleY),
+          rotation: node.rotation(),
+        };
+      }
+
+      return newRects;
+    });
   };
 
   return (
@@ -72,13 +274,14 @@ function App() {
       </select>
       <Stage
         width={window.innerWidth}
-        height={window.innerHeight - 25}
+        height={window.innerHeight}
         onMouseDown={handleMouseDown}
         onMousemove={handleMouseMove}
         onMouseup={handleMouseUp}
         onTouchStart={handleMouseDown}
         onTouchMove={handleMouseMove}
         onTouchEnd={handleMouseUp}
+        onClick={handleStageClick}
       >
         <Layer>
           {lines.map((line, i) => (
@@ -93,16 +296,54 @@ function App() {
               globalCompositeOperation={
                 line.tool === "eraser" ? "destination-out" : "source-over"
               }
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
             />
           ))}
           {texts.map((text, i) => (
             <EditableText
               key={i}
-              id={i}
+              id={text.id}
               points={text.points}
               select={text.select}
+              onDragEnd={handleDragEnd}
+              ref={(node) => {
+                if (node) {
+                  rectRefs.current.set(text.id, node);
+                }
+              }}
+              onTransformEnd={handleTransformEnd}
             />
           ))}
+
+          {tool === "default" && (
+            <>
+              <Transformer
+                ref={transformerRef}
+                boundBoxFunc={(oldBox, newBox) => {
+                  // Limit resize
+                  if (newBox.width < 5 || newBox.height < 5) {
+                    return oldBox;
+                  }
+                  return newBox;
+                }}
+              />
+
+              {selectionRectangle.visible && (
+                <Rect
+                  x={Math.min(selectionRectangle.x1, selectionRectangle.x2)}
+                  y={Math.min(selectionRectangle.y1, selectionRectangle.y2)}
+                  width={Math.abs(
+                    selectionRectangle.x2 - selectionRectangle.x1
+                  )}
+                  height={Math.abs(
+                    selectionRectangle.y2 - selectionRectangle.y1
+                  )}
+                  fill="rgba(0,0,255,0.5)"
+                />
+              )}
+            </>
+          )}
         </Layer>
       </Stage>
     </>

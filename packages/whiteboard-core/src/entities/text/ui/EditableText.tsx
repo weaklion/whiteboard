@@ -1,9 +1,16 @@
 import { Text, Transformer } from "react-konva";
 import { Html } from "react-konva-utils";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useImperativeHandle,
+} from "react";
 
 import type Konva from "konva";
+import type { KonvaEventObject } from "konva/lib/Node";
 
 const TextEditor = ({
   textNode,
@@ -116,16 +123,24 @@ export const EditableText = ({
   points,
   select,
   id,
+  onDragEnd,
+  onTransformEnd,
+  ref,
 }: {
   points: number[];
   select: boolean;
-  id: number;
+  id: string;
+  onDragEnd: (e: KonvaEventObject<DragEvent>) => void;
+  onTransformEnd: (e: KonvaEventObject<Event>) => void;
+  ref?: React.Ref<Konva.Text>;
 }) => {
   const [text, setText] = useState("대충 이런 글씨");
   const [isEditing, setIsEditing] = useState(false);
   const [textWidth, setTextWidth] = useState(200);
   const textRef = useRef<Konva.Text>(null); //textNode ref
   const trRef = useRef<Konva.Transformer>(null); // transformer  ref
+
+  useImperativeHandle(ref, () => textRef.current as Konva.Text);
 
   useEffect(() => {
     if (trRef.current && textRef.current) {
@@ -161,7 +176,7 @@ export const EditableText = ({
   return (
     <>
       <Text
-        id={`text_${id}`}
+        id={id}
         ref={textRef}
         text={text}
         x={points[0]}
@@ -172,6 +187,8 @@ export const EditableText = ({
         onDblClick={handleTextDblClick}
         onDblTap={handleTextDblClick}
         onTransform={handleTransform}
+        onDragEnd={onDragEnd}
+        onTransformEnd={onTransformEnd}
         visible={!isEditing}
       />
       {select ?? (

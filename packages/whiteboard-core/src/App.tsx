@@ -2,13 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import { Stage, Layer, Line, Transformer, Rect } from "react-konva";
 
 import type { KonvaEventObject } from "konva/lib/Node";
-import { EditableText } from "./entities/text/ui/EditableText";
+import { EditableText } from "./shared/ui/EditableText";
 import Konva from "konva";
 
 // Helper functions for calculating bounding boxes of rotated rectangles
-const degToRad = (angle) => (angle / 180) * Math.PI;
+const degToRad = (angle: number) => (angle / 180) * Math.PI;
 
-const getCorner = (pivotX, pivotY, diffX, diffY, angle) => {
+const getCorner = (
+  pivotX: number,
+  pivotY: number,
+  diffX: number,
+  diffY: number,
+  angle: number
+) => {
   const distance = Math.sqrt(diffX * diffX + diffY * diffY);
   angle += Math.atan2(diffY, diffX);
   const x = pivotX + distance * Math.cos(angle);
@@ -177,7 +183,7 @@ function App() {
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e) => {
     if (tool === "default") {
       if (!isSelecting.current) {
         return;
@@ -208,12 +214,14 @@ function App() {
 
       setSelectedIds(selected.map((rect) => rect.id));
     } else {
+      console.log(e, "e");
       isDrawing.current = false;
     }
   };
 
   const handleDragEnd = (e: KonvaEventObject<DragEvent>) => {
     const id = e.target.id();
+    console.log(id, "id");
     setRectangles((prevRects) => {
       const newRects = [...prevRects];
       const index = newRects.findIndex((r) => r.id === id);
@@ -231,7 +239,7 @@ function App() {
   const handleTransformEnd = (e: KonvaEventObject<Event>) => {
     const id = e.target.id();
     const node = e.target;
-
+    console.log(e.target, "etaer");
     setRectangles((prevRects) => {
       const newRects = [...prevRects];
 

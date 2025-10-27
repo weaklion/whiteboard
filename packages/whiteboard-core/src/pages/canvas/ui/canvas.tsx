@@ -1,56 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { Stage, Layer, Line, Transformer, Rect } from "react-konva";
-
+import { Stage, Layer, Transformer, Rect, Line } from "react-konva";
+import { nanoid } from "nanoid";
 import type { KonvaEventObject } from "konva/lib/Node";
-import { EditableText } from "@shared/ui/EditableText";
 import Konva from "konva";
-
-const degToRad = (angle: number) => (angle / 180) * Math.PI;
-
-const getCorner = (
-  pivotX: number,
-  pivotY: number,
-  diffX: number,
-  diffY: number,
-  angle: number
-) => {
-  const distance = Math.sqrt(diffX * diffX + diffY * diffY);
-  angle += Math.atan2(diffY, diffX);
-  const x = pivotX + distance * Math.cos(angle);
-  const y = pivotY + distance * Math.sin(angle);
-  return { x, y };
-};
-
-const getClientRect = (element) => {
-  const { x, y, width, height, rotation = 0 } = element;
-  const rad = degToRad(rotation);
-
-  const p1 = getCorner(x, y, 0, 0, rad);
-  const p2 = getCorner(x, y, width, 0, rad);
-  const p3 = getCorner(x, y, width, height, rad);
-  const p4 = getCorner(x, y, 0, height, rad);
-
-  const minX = Math.min(p1.x, p2.x, p3.x, p4.x);
-  const minY = Math.min(p1.y, p2.y, p3.y, p4.y);
-  const maxX = Math.max(p1.x, p2.x, p3.x, p4.x);
-  const maxY = Math.max(p1.y, p2.y, p3.y, p4.y);
-
-  return {
-    x: minX,
-    y: minY,
-    width: maxX - minX,
-    height: maxY - minY,
-  };
-};
+import { getClientRect, getLineBoundingBox } from "../canvas.lib";
+import { useShapeStore } from "@/entities/shape";
+import { LineShape, TextShape } from "@/entities/shape";
 
 export const Canvas = () => {
   const [tool, setTool] = useState("brush");
-  const [lines, setLines] = useState<{ tool: string; points: number[] }[]>([]);
-  const [texts, setTexts] = useState<
-    { id: string; points: number[]; select: boolean }[]
-  >([]);
-  const [rectangles, setRectangles] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [stroke, setStroke] = useState("#df4b26");
+  const [strokeWidth, setStrokeWidth] = useState(5);
+
+  const [line, setLine] = useState<{ points: number[] }>();
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectionRectangle, setSelectionRectangle] = useState({
     visible: false,
     x1: 0,
@@ -58,18 +22,17 @@ export const Canvas = () => {
     x2: 0,
     y2: 0,
   });
+  const { addShape, shapes } = useShapeStore();
   const isSelecting = useRef(false);
-  const transformerRef = useRef(null);
-  const rectRefs = useRef(new Map());
-
+  const transformerRef = useRef<Konva.Transformer>(null);
+  const shapeRefs = useRef<Map<string, Konva.Node>>(new Map());
   const isDrawing = useRef(false);
 
   useEffect(() => {
-    console.log(selectedIds, "select");
     if (selectedIds.length && transformerRef.current) {
       const nodes = selectedIds
-        .map((id) => rectRefs.current.get(id))
-        .filter((node) => node);
+        .map((id) => shapeRefs.current.get(id))
+        .filter((node) => node !== undefined);
 
       transformerRef.current.nodes(nodes);
     } else if (transformerRef.current) {
@@ -136,13 +99,22 @@ export const Canvas = () => {
       if (pos) {
         if (tool === "brush" || tool === "eraser") {
           isDrawing.current = true;
-          setLines([...lines, { tool, points: [pos.x, pos.y] }]);
+
+          setLine({ points: [pos.x, pos.y] });
         } else if (tool === "text") {
-          const newId = `text_${texts.length}`;
-          setTexts([
-            ...texts,
-            { id: newId, points: [pos.x, pos.y], select: false },
-          ]);
+          const id = nanoid(3);
+          addShape({
+            id: id,
+            type: "text",
+            height: 200,
+            width: 200,
+            x: pos.x,
+            y: pos.y,
+            value: "text 입력",
+            rotation: 0,
+          });
+          setSelectedIds([id]);
+
           setTool("default");
         }
       }
@@ -170,26 +142,21 @@ export const Canvas = () => {
 
       const stage = e.target.getStage();
       const point = stage?.getPointerPosition();
-
-      const lastLine = lines[lines.length - 1];
-      if (point) {
-        lastLine.points = lastLine.points.concat([point.x, point.y]);
+      if (point && line) {
+        const points = line.points.concat([point.x, point.y]);
+        setLine({
+          points: points,
+        });
       }
-
-      // replace last
-      lines.splice(lines.length - 1, 1, lastLine);
-      setLines(lines.concat());
-      console.log(lines, "lines");
     }
   };
 
-  const handleMouseUp = (e) => {
+  const handleMouseUp = () => {
     if (tool === "default") {
       if (!isSelecting.current) {
         return;
       }
       isSelecting.current = false;
-      // Update visibility in timeout, so we can check it in click event
 
       setTimeout(() => {
         setSelectionRectangle({
@@ -205,67 +172,39 @@ export const Canvas = () => {
         height: Math.abs(selectionRectangle.y2 - selectionRectangle.y1),
       };
 
-      const selected = rectangles.filter((rect) => {
-        // Check if rectangle intersects with selection box
-        return Konva.Util.haveIntersection(selBox, getClientRect(rect));
+      const selected = shapes.filter((shape) => {
+        return Konva.Util.haveIntersection(selBox, getClientRect(shape));
       });
-
-      console.log(selected, "selected");
 
       setSelectedIds(selected.map((rect) => rect.id));
     } else {
-      console.log(e, "e");
-      isDrawing.current = false;
+      if (isDrawing.current) {
+        // padding 추가 (선택하기 쉽게)
+        const padding = 10;
+        if (line) {
+          const bbox = getLineBoundingBox(line.points);
+
+          addShape({
+            type: "line",
+            id: nanoid(3),
+            height: bbox.height + padding * 2,
+            width: bbox.width + padding * 2,
+            points: bbox.points,
+            stroke: stroke,
+            strokeWidth: strokeWidth,
+            x: bbox.x,
+            y: bbox.y,
+            tension: 0.5,
+            rotation: 0,
+          });
+        }
+        setLine(undefined);
+
+        isDrawing.current = false;
+      }
     }
   };
 
-  const handleDragEnd = (e: KonvaEventObject<DragEvent>) => {
-    const id = e.target.id();
-    console.log(id, "id");
-    setRectangles((prevRects) => {
-      const newRects = [...prevRects];
-      const index = newRects.findIndex((r) => r.id === id);
-      if (index !== -1) {
-        newRects[index] = {
-          ...newRects[index],
-          x: e.target.x(),
-          y: e.target.y(),
-        };
-      }
-      return newRects;
-    });
-  };
-
-  const handleTransformEnd = (e: KonvaEventObject<Event>) => {
-    const id = e.target.id();
-    const node = e.target;
-    console.log(e.target, "etaer");
-    setRectangles((prevRects) => {
-      const newRects = [...prevRects];
-
-      // Update each transformed node
-      const index = newRects.findIndex((r) => r.id === id);
-
-      if (index !== -1) {
-        const scaleX = node.scaleX();
-        const scaleY = node.scaleY();
-        // Reset scale
-        node.scaleX(1);
-        node.scaleY(1);
-
-        newRects[index] = {
-          ...newRects[index],
-          x: node.x(),
-          y: node.y(),
-          width: Math.max(5, node.width() * scaleX),
-          height: Math.max(node.height() * scaleY),
-          rotation: node.rotation(),
-        };
-      }
-
-      return newRects;
-    });
-  };
   return (
     <>
       <select
@@ -291,37 +230,34 @@ export const Canvas = () => {
         onClick={handleStageClick}
       >
         <Layer>
-          {lines.map((line, i) => (
+          {shapes?.map(
+            (shape) =>
+              (shape.type === "line" && (
+                <LineShape
+                  data={shape}
+                  key={shape.id}
+                  isDrawing={isDrawing.current}
+                  shapeRefs={shapeRefs}
+                />
+              )) ||
+              (shape.type === "text" && (
+                <TextShape data={shape} key={shape.id} shapeRefs={shapeRefs} />
+              ))
+          )}
+          {isDrawing && (
             <Line
-              key={i}
-              points={line.points}
+              points={line?.points}
               stroke="#df4b26"
               strokeWidth={5}
               tension={0.5}
               lineCap="round"
               lineJoin="round"
+              hitStrokeWidth={50}
               globalCompositeOperation={
-                line.tool === "eraser" ? "destination-out" : "source-over"
+                tool === "eraser" ? "destination-out" : "source-over"
               }
-              onDragEnd={handleDragEnd}
-              onTransformEnd={handleTransformEnd}
             />
-          ))}
-          {texts.map((text, i) => (
-            <EditableText
-              key={i}
-              id={text.id}
-              points={text.points}
-              select={text.select}
-              onDragEnd={handleDragEnd}
-              ref={(node) => {
-                if (node) {
-                  rectRefs.current.set(text.id, node);
-                }
-              }}
-              onTransformEnd={handleTransformEnd}
-            />
-          ))}
+          )}
 
           {tool === "default" && (
             <>

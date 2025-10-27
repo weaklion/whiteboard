@@ -1,16 +1,20 @@
-import { Text, Transformer } from "react-konva";
+import { Text } from "react-konva";
 import { Html } from "react-konva-utils";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  useImperativeHandle,
-} from "react";
+import { useRef, useState, useCallback, useImperativeHandle } from "react";
 
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
+
+export interface EditableTextProps {
+  id: string;
+  x: number;
+  y: number;
+  value: string;
+  onDragEnd: (e: KonvaEventObject<DragEvent>) => void;
+  onTransformEnd: (e: KonvaEventObject<Event>) => void;
+  ref?: React.Ref<Konva.Text>;
+}
 
 const TextEditor = ({
   textNode,
@@ -120,38 +124,23 @@ const TextEditor = ({
 };
 
 export const EditableText = ({
-  points,
-  select,
   id,
+  x,
+  y,
+  value,
   onDragEnd,
   onTransformEnd,
   ref,
-}: {
-  points: number[];
-  select: boolean;
-  id: string;
-  onDragEnd: (e: KonvaEventObject<DragEvent>) => void;
-  onTransformEnd: (e: KonvaEventObject<Event>) => void;
-  ref?: React.Ref<Konva.Text>;
-}) => {
-  const [text, setText] = useState("대충 이런 글씨");
+}: EditableTextProps) => {
+  const [text, setText] = useState(value);
   const [isEditing, setIsEditing] = useState(false);
   const [textWidth, setTextWidth] = useState(200);
   const textRef = useRef<Konva.Text>(null); //textNode ref
-  const trRef = useRef<Konva.Transformer>(null); // transformer  ref
 
-  useImperativeHandle(ref, () => textRef.current as Konva.Text);
-
-  useEffect(() => {
-    if (trRef.current && textRef.current) {
-      trRef.current.nodes([textRef.current]);
-    }
-  }, [isEditing]);
+  useImperativeHandle(ref, () => textRef.current as Konva.Text, []);
 
   const handleTextDblClick = useCallback(() => {
-    if (select) {
-      setIsEditing(true);
-    }
+    setIsEditing(true);
   }, []);
 
   const handleTextChange = useCallback((newText: string) => {
@@ -159,17 +148,15 @@ export const EditableText = ({
   }, []);
 
   const handleTransform = useCallback(() => {
-    if (select) {
-      const node = textRef.current;
-      if (node) {
-        const scaleX = node.scaleX();
-        const newWidth = node.width() * scaleX;
-        setTextWidth(newWidth);
-        node.setAttrs({
-          width: newWidth,
-          scaleX: 1,
-        });
-      }
+    const node = textRef.current;
+    if (node) {
+      const scaleX = node.scaleX();
+      const newWidth = node.width() * scaleX;
+      setTextWidth(newWidth);
+      node.setAttrs({
+        width: newWidth,
+        scaleX: 1,
+      });
     }
   }, []);
 
@@ -179,8 +166,8 @@ export const EditableText = ({
         id={id}
         ref={textRef}
         text={text}
-        x={points[0]}
-        y={points[1]}
+        x={x}
+        y={y}
         fontSize={20}
         draggable
         width={textWidth}
@@ -191,28 +178,17 @@ export const EditableText = ({
         onTransformEnd={onTransformEnd}
         visible={!isEditing}
       />
-      {select ?? (
-        <>
-          {isEditing &&
-            textRef.current && ( // textRef.current가 있을 때만 렌더링
-              <TextEditor
-                textNode={textRef.current}
-                onChange={handleTextChange}
-                onClose={() => setIsEditing(false)}
-              />
-            )}
-          {!isEditing && (
-            <Transformer
-              ref={trRef}
-              enabledAnchors={["middle-left", "middle-right"]}
-              boundBoxFunc={(_, newBox) => ({
-                ...newBox,
-                width: Math.max(30, newBox.width),
-              })}
+
+      <>
+        {isEditing &&
+          textRef.current && ( // textRef.current가 있을 때만 렌더링
+            <TextEditor
+              textNode={textRef.current}
+              onChange={handleTextChange}
+              onClose={() => setIsEditing(false)}
             />
           )}
-        </>
-      )}
+      </>
     </>
   );
 };

@@ -1,6 +1,6 @@
 export { useShapeStore } from "./model/shapeStore";
-export { LineShape } from "./ui/LineShape";
-export { TextShape } from "./ui/TextShape";
+export { LineShape } from "./ui/lineShape";
+export { TextShape } from "./ui/textShape";
 export type {
   ShapeType,
   ShapeLine,

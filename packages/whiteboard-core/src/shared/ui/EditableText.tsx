@@ -11,9 +11,11 @@ export interface EditableTextProps {
   x: number;
   y: number;
   value: string;
+  width: number;
+  ref?: React.Ref<Konva.Text>;
   onDragEnd: (e: KonvaEventObject<DragEvent>) => void;
   onTransformEnd: (e: KonvaEventObject<Event>) => void;
-  ref?: React.Ref<Konva.Text>;
+  onEditing: () => void;
 }
 
 const TextEditor = ({
@@ -28,6 +30,7 @@ const TextEditor = ({
   const setTextareaRef = useCallback(
     (node: HTMLTextAreaElement | null) => {
       if (node) {
+        console.log(textNode.height(), "current");
         const textarea = node;
 
         const textPosition = textNode.position();
@@ -36,7 +39,6 @@ const TextEditor = ({
           y: textPosition.y,
         };
 
-        // Match styles with the text node
         textarea.value = textNode.text();
         textarea.style.position = "absolute";
         textarea.style.top = `${areaPosition.y}px`;
@@ -75,7 +77,6 @@ const TextEditor = ({
           }
         };
 
-        // Add event listeners
         const handleKeyDown = (e: KeyboardEvent) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -96,11 +97,12 @@ const TextEditor = ({
 
         textarea.addEventListener("keydown", handleKeyDown);
         textarea.addEventListener("input", handleInput);
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           window.addEventListener("click", handleOutsideClick);
         });
 
         return () => {
+          clearTimeout(timeoutId);
           textarea.removeEventListener("keydown", handleKeyDown);
           textarea.removeEventListener("input", handleInput);
           window.removeEventListener("click", handleOutsideClick);
@@ -128,18 +130,21 @@ export const EditableText = ({
   x,
   y,
   value,
+  width,
+
   onDragEnd,
   onTransformEnd,
+  onEditing,
   ref,
 }: EditableTextProps) => {
   const [text, setText] = useState(value);
   const [isEditing, setIsEditing] = useState(false);
-  const [textWidth, setTextWidth] = useState(200);
   const textRef = useRef<Konva.Text>(null); //textNode ref
 
   useImperativeHandle(ref, () => textRef.current as Konva.Text, []);
 
   const handleTextDblClick = useCallback(() => {
+    onEditing();
     setIsEditing(true);
   }, []);
 
@@ -152,13 +157,17 @@ export const EditableText = ({
     if (node) {
       const scaleX = node.scaleX();
       const newWidth = node.width() * scaleX;
-      setTextWidth(newWidth);
+
       node.setAttrs({
         width: newWidth,
         scaleX: 1,
       });
     }
   }, []);
+
+  const handleClose = useCallback(() => {
+    setIsEditing(false);
+  }, []); // 메모이제이션 추가
 
   return (
     <>
@@ -169,8 +178,8 @@ export const EditableText = ({
         x={x}
         y={y}
         fontSize={20}
+        width={width}
         draggable
-        width={textWidth}
         onDblClick={handleTextDblClick}
         onDblTap={handleTextDblClick}
         onTransform={handleTransform}
@@ -185,7 +194,7 @@ export const EditableText = ({
             <TextEditor
               textNode={textRef.current}
               onChange={handleTextChange}
-              onClose={() => setIsEditing(false)}
+              onClose={handleClose}
             />
           )}
       </>

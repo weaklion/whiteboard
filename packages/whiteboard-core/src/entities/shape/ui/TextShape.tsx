@@ -1,5 +1,5 @@
 import type { ShapeText } from "../model/shapeType";
-import { EditableText } from "@/shared/ui/EditableText";
+import { EditableText } from "@/shared/ui/editableText";
 import type { RefObject } from "react";
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
@@ -7,9 +7,11 @@ import type { KonvaEventObject } from "konva/lib/Node";
 export const TextShape = ({
   data,
   shapeRefs,
+  onEditing,
 }: {
   data: ShapeText;
   shapeRefs: RefObject<Map<string, Konva.Node>>;
+  onEditing: () => void;
 }) => {
   const handleDragEnd = (e: KonvaEventObject<DragEvent>) => {
     console.log(e);
@@ -30,9 +32,11 @@ export const TextShape = ({
         }}
         x={data.x | 0}
         y={data.y | 0}
+        width={data.width | 200}
         value={data.value}
         onDragEnd={handleDragEnd}
         onTransformEnd={handleTransformEnd}
+        onEditing={onEditing}
       />
     </>
   );

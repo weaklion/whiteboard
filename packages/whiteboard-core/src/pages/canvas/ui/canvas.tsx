@@ -6,23 +6,22 @@ import Konva from "konva";
 import { getClientRect, getLineBoundingBox } from "../canvas.lib";
 import { useShapeStore } from "@/entities/shape";
 import { LineShape, TextShape } from "@/entities/shape";
+import { useToolStore } from "@/features/canvas-tools";
+import { useSelectionStore } from "@/features/canvas-selection";
+import { Eraser, Pencil, Pointer, Type } from "lucide-react";
 
 export const Canvas = () => {
-  const [tool, setTool] = useState("brush");
-  const [stroke, setStroke] = useState("#df4b26");
-  const [strokeWidth, setStrokeWidth] = useState(5);
-
   const [line, setLine] = useState<{ points: number[] }>();
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectionRectangle, setSelectionRectangle] = useState({
-    visible: false,
-    x1: 0,
-    y1: 0,
-    x2: 0,
-    y2: 0,
-  });
   const { addShape, shapes } = useShapeStore();
+  const { setTool, stroke, tool, strokeWidth } = useToolStore();
+  const {
+    selectedIds,
+    setSelectedIds,
+    selectionRectangle,
+    setSelectionRectangle,
+  } = useSelectionStore();
+
   const isSelecting = useRef(false);
   const transformerRef = useRef<Konva.Transformer>(null);
   const shapeRefs = useRef<Map<string, Konva.Node>>(new Map());
@@ -106,11 +105,11 @@ export const Canvas = () => {
           addShape({
             id: id,
             type: "text",
-            height: 200,
+            height: 48,
             width: 200,
             x: pos.x,
             y: pos.y,
-            value: "text 입력",
+            value: "text를 입력 해주세요",
             rotation: 0,
           });
           setSelectedIds([id]);
@@ -178,12 +177,11 @@ export const Canvas = () => {
 
       setSelectedIds(selected.map((rect) => rect.id));
     } else {
-      if (isDrawing.current) {
+      if (isDrawing.current && tool === "brush") {
         // padding 추가 (선택하기 쉽게)
         const padding = 10;
         if (line) {
           const bbox = getLineBoundingBox(line.points);
-
           addShape({
             type: "line",
             id: nanoid(3),
@@ -207,17 +205,20 @@ export const Canvas = () => {
 
   return (
     <>
-      <select
-        value={tool}
-        onChange={(e) => {
-          setTool(e.target.value);
-        }}
-      >
-        <option value="brush">Brush</option>
-        <option value="eraser">Eraser</option>
-        <option value="text">Text</option>
-        <option value="default">Default</option>
-      </select>
+      <div className="flex gap-x-2 m-4">
+        <button className="btn" onClick={() => setTool("brush")}>
+          <Pencil />
+        </button>
+        <button className="btn" onClick={() => setTool("eraser")}>
+          <Eraser />
+        </button>
+        <button className="btn" onClick={() => setTool("text")}>
+          <Type />
+        </button>
+        <button className="btn" onClick={() => setTool("default")}>
+          <Pointer />
+        </button>
+      </div>
       <Stage
         width={window.innerWidth}
         height={window.innerHeight}
@@ -237,11 +238,17 @@ export const Canvas = () => {
                   data={shape}
                   key={shape.id}
                   isDrawing={isDrawing.current}
+                  isErasing={tool === "eraser"}
                   shapeRefs={shapeRefs}
                 />
               )) ||
               (shape.type === "text" && (
-                <TextShape data={shape} key={shape.id} shapeRefs={shapeRefs} />
+                <TextShape
+                  data={shape}
+                  key={shape.id}
+                  shapeRefs={shapeRefs}
+                  onEditing={() => setSelectedIds([])}
+                />
               ))
           )}
           {isDrawing && (

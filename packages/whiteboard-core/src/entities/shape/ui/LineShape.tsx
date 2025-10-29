@@ -8,11 +8,13 @@ import type { KonvaEventObject } from "konva/lib/Node";
 export const LineShape = ({
   data,
   isDrawing,
+  isErasing,
   shapeRefs,
 }: {
   data: ShapeLine;
   shapeRefs: RefObject<Map<string, Konva.Node>>;
   isDrawing: boolean;
+  isErasing: boolean;
 }) => {
   const { setShape, shapes } = useShapeStore();
 
@@ -75,9 +77,7 @@ export const LineShape = ({
         lineCap="round"
         lineJoin="round"
         hitStrokeWidth={20}
-        // globalCompositeOperation={
-        //   line.tool === "eraser" ? "destination-out" : "source-over"
-        // }
+        globalCompositeOperation={isErasing ? "destination-out" : "source-over"}
         x={data.x || 0}
         y={data.y || 0}
         rotation={data.rotation || 0}

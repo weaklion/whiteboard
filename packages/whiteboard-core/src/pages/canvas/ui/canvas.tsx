@@ -3,7 +3,7 @@ import { Stage, Layer, Transformer, Rect, Line } from "react-konva";
 import { nanoid } from "nanoid";
 import type { KonvaEventObject } from "konva/lib/Node";
 import Konva from "konva";
-import { getClientRect, getLineBoundingBox } from "../canvas.lib";
+import { getClientRect, getLineBoundingBox } from "@features/canvas-tools";
 import { useShapeStore } from "@/entities/shape";
 import { LineShape, TextShape } from "@/entities/shape";
 import { useToolStore } from "@/features/canvas-tools";
@@ -17,15 +17,18 @@ export const Canvas = () => {
   const { setTool, stroke, tool, strokeWidth } = useToolStore();
   const {
     selectedIds,
+    historyIdx,
     setSelectedIds,
     selectionRectangle,
     setSelectionRectangle,
+    setHistoryIdx,
   } = useSelectionStore();
 
   const isSelecting = useRef(false);
   const transformerRef = useRef<Konva.Transformer>(null);
   const shapeRefs = useRef<Map<string, Konva.Node>>(new Map());
   const isDrawing = useRef(false);
+  const visibleShape = shapes.slice(0, historyIdx);
 
   useEffect(() => {
     if (selectedIds.length && transformerRef.current) {
@@ -39,6 +42,16 @@ export const Canvas = () => {
       transformerRef.current.nodes([]);
     }
   }, [selectedIds]);
+
+  const handleUndo = () => {
+    if (historyIdx === 0) return;
+    setHistoryIdx(historyIdx - 1);
+  };
+
+  const handleRedo = () => {
+    if (historyIdx === shapes.length) return;
+    setHistoryIdx(historyIdx + 1);
+  };
 
   const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
     // If we are selecting with rect, do nothing
@@ -113,6 +126,7 @@ export const Canvas = () => {
             rotation: 0,
           });
           setSelectedIds([id]);
+          setHistoryIdx(historyIdx + 1);
 
           setTool("default");
         }
@@ -196,10 +210,10 @@ export const Canvas = () => {
             rotation: 0,
           });
         }
-        setLine(undefined);
-
-        isDrawing.current = false;
+        setHistoryIdx(historyIdx + 1);
       }
+      setLine(undefined);
+      isDrawing.current = false;
     }
   };
 
@@ -218,6 +232,12 @@ export const Canvas = () => {
         <button className="btn" onClick={() => setTool("default")}>
           <Pointer />
         </button>
+        <button className="btn" onClick={handleUndo}>
+          undo
+        </button>
+        <button className="btn" onClick={handleRedo}>
+          redo
+        </button>
       </div>
       <Stage
         width={window.innerWidth}
@@ -231,14 +251,13 @@ export const Canvas = () => {
         onClick={handleStageClick}
       >
         <Layer>
-          {shapes?.map(
+          {visibleShape?.map(
             (shape) =>
               (shape.type === "line" && (
                 <LineShape
                   data={shape}
                   key={shape.id}
                   isDrawing={isDrawing.current}
-                  isErasing={tool === "eraser"}
                   shapeRefs={shapeRefs}
                 />
               )) ||

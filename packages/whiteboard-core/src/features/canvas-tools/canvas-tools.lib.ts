@@ -80,3 +80,5 @@ export const getClientRect = (element: Shape) => {
     height: maxY - minY,
   };
 };
+
+// 지우개는 그린 라인과 지금 가지고 있는 shape의 line을 비교해 맞닿고 있는 부분을 기하학적 접근으로 제거해야한다.

@@ -5,6 +5,7 @@ interface Store {
   shapes: Shape[];
   selectedShape: Shape;
   addShape: (item: Shape) => void;
+  removeShape: (id: string) => void;
   setShape: (item: Shape) => void;
   setSelectedShape: (item: Shape) => void;
 }
@@ -28,6 +29,11 @@ export const useShapeStore = create<Store>((set) => ({
     set((state) => ({
       shapes: [...state.shapes, shape],
     })),
+  removeShape: (id) =>
+    set((state) => ({
+      shapes: state.shapes.filter((shape) => shape.id !== id),
+    })),
+
   setShape: (shape) =>
     set((state) => ({
       shapes: state.shapes.map((sshape) => {

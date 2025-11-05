@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 interface SelectionStore {
+  historyIdx: number;
   selectedIds: string[];
   selectionRectangle: {
     visible: boolean;
@@ -9,11 +10,13 @@ interface SelectionStore {
     x2: number;
     y2: number;
   };
+  setHistoryIdx: (idx: number) => void;
   setSelectedIds: (ids: string[]) => void;
   setSelectionRectangle: (rect: SelectionStore["selectionRectangle"]) => void;
 }
 
 export const useSelectionStore = create<SelectionStore>((set) => ({
+  historyIdx: 0,
   selectedIds: [],
   selectionRectangle: {
     visible: false,
@@ -22,6 +25,7 @@ export const useSelectionStore = create<SelectionStore>((set) => ({
     x2: 0,
     y2: 0,
   },
+  setHistoryIdx: (historyIdx) => set({ historyIdx }),
   setSelectedIds: (selectedIds) => set({ selectedIds }),
   setSelectionRectangle: (selectionRectangle) => set({ selectionRectangle }),
 }));

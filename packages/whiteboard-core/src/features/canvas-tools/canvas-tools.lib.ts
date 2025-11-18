@@ -1,4 +1,5 @@
 import type { Shape } from "@/entities/shape";
+import type { LineSegment } from "./canvas-tools.types";
 
 export const degToRad = (angle: number) => (angle / 180) * Math.PI;
 
@@ -82,3 +83,28 @@ export const getClientRect = (element: Shape) => {
 };
 
 // 지우개는 그린 라인과 지금 가지고 있는 shape의 line을 비교해 맞닿고 있는 부분을 기하학적 접근으로 제거해야한다.
+
+export const intersectLineSegment = (
+  l1: LineSegment,
+  l2: LineSegment
+): boolean => {
+  const [p1, p2] = l1,
+    [p3, p4] = l2;
+
+  const [x1, y1] = p1,
+    [x2, y2] = p2,
+    [x3, y3] = p3,
+    [x4, y4] = p4;
+
+  //분모
+  const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (d === 0) {
+    //분모가 0일시 두 선은 평행이다
+    return false;
+  }
+  // t === 선1 , s === 선2;
+  const t = (x1 - x3) * (y3 - y4) - ((y1 - y3) * (x3 - x4)) / d;
+  const s = (x1 - x3) * (y1 - y2) - ((y1 - y3) * (x1 - x2)) / d;
+
+  return t >= 0 && t <= 1 && s >= 0 && s <= 1;
+};

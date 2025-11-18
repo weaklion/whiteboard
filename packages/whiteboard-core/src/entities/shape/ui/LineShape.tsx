@@ -35,7 +35,6 @@ export const LineShape = ({
     const node = e.target;
 
     const selectedShape = shapes.find((shape) => shape.id === id);
-    console.log(selectedShape, "selectShape");
     if (selectedShape && selectedShape.type === "line") {
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
@@ -68,7 +67,7 @@ export const LineShape = ({
             shapeRefs.current.set(data.id, node);
           }
         }}
-        points={data.points}
+        points={data.points.flatMap((point) => point)}
         stroke={data.stroke}
         strokeWidth={data.strokeWidth}
         tension={data.tension}

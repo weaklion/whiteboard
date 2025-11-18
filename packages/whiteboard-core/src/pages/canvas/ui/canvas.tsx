@@ -54,37 +54,29 @@ export const Canvas = () => {
   };
 
   const handleStageClick = (e: KonvaEventObject<MouseEvent>) => {
-    // If we are selecting with rect, do nothing
     if (selectionRectangle.visible) {
       return;
     }
 
-    // If click on empty area - remove all selectisons
     if (e.target === e.target.getStage()) {
       setSelectedIds([]);
       return;
     }
-    // Do nothing if clicked NOT on our rectangles
+
     if (!e.target.hasName("rect")) {
       return;
     }
 
     const clickedId = e.target.id();
-    // Do we pressed shift or ctrl?
 
     const metaPressed = e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey;
     const isSelected = selectedIds.includes(clickedId);
 
     if (!metaPressed && !isSelected) {
-      // If no key pressed and the node is not selected
-      // select just one
       setSelectedIds([clickedId]);
     } else if (metaPressed && isSelected) {
-      // If we pressed keys and node was selected
-      // we need to remove it from selection
       setSelectedIds(selectedIds.filter((id) => id !== clickedId));
     } else if (metaPressed && !isSelected) {
-      // Add the node into selection
       setSelectedIds([...selectedIds, clickedId]);
     }
   };
@@ -191,27 +183,32 @@ export const Canvas = () => {
 
       setSelectedIds(selected.map((rect) => rect.id));
     } else {
-      if (isDrawing.current && tool === "brush") {
-        // padding 추가 (선택하기 쉽게)
-        const padding = 10;
-        if (line) {
-          const bbox = getLineBoundingBox(line.points);
-          addShape({
-            type: "line",
-            id: nanoid(3),
-            height: bbox.height + padding * 2,
-            width: bbox.width + padding * 2,
-            points: bbox.points,
-            stroke: stroke,
-            strokeWidth: strokeWidth,
-            x: bbox.x,
-            y: bbox.y,
-            tension: 0.5,
-            rotation: 0,
-          });
+      if (isDrawing.current) {
+        if (tool === "brush") {
+          // padding 추가 (선택하기 쉽게)
+          const padding = 10;
+          if (line) {
+            const bbox = getLineBoundingBox(line.points);
+            addShape({
+              type: "line",
+              id: nanoid(3),
+              height: bbox.height + padding * 2,
+              width: bbox.width + padding * 2,
+              points: bbox.points,
+              stroke: stroke,
+              strokeWidth: strokeWidth,
+              x: bbox.x,
+              y: bbox.y,
+              tension: 0.5,
+              rotation: 0,
+            });
+          }
+          setHistoryIdx(historyIdx + 1);
+        } else if (tool === "eraser") {
+          console.log(line?.points, "line");
         }
-        setHistoryIdx(historyIdx + 1);
       }
+
       setLine(undefined);
       isDrawing.current = false;
     }

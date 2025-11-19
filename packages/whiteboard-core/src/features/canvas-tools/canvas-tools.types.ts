@@ -1,2 +1,4 @@
-export type Point = [number, number];
-export type LineSegment = [Point, Point];
+export interface Point {
+  x: number;
+  y: number;
+}

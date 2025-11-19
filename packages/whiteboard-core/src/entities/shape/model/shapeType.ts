@@ -17,8 +17,8 @@ export interface ShapeLine extends ShapeType {
   stroke: string;
   strokeWidth: number;
   tension: number;
+  isEraser: boolean;
 }
-
 export interface ShapeText extends ShapeType {
   type: "text";
   value: string;

@@ -67,7 +67,7 @@ export const LineShape = ({
             shapeRefs.current.set(data.id, node);
           }
         }}
-        points={data.points.flatMap((point) => point)}
+        points={data.points}
         stroke={data.stroke}
         strokeWidth={data.strokeWidth}
         tension={data.tension}
@@ -80,6 +80,9 @@ export const LineShape = ({
         draggable={!isDrawing}
         onDragEnd={handleDragEnd}
         onTransformEnd={handleTransformEnd}
+        globalCompositeOperation={
+          data.isEraser ? "destination-out" : "source-over"
+        }
       />
     </>
   );

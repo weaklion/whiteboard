@@ -28,6 +28,7 @@ export const Canvas = () => {
   const transformerRef = useRef<Konva.Transformer>(null);
   const shapeRefs = useRef<Map<string, Konva.Node>>(new Map());
   const isDrawing = useRef(false);
+
   const visibleShape = shapes.slice(0, historyIdx);
 
   useEffect(() => {
@@ -184,29 +185,26 @@ export const Canvas = () => {
       setSelectedIds(selected.map((rect) => rect.id));
     } else {
       if (isDrawing.current) {
-        if (tool === "brush") {
-          // padding 추가 (선택하기 쉽게)
-          const padding = 10;
-          if (line) {
-            const bbox = getLineBoundingBox(line.points);
-            addShape({
-              type: "line",
-              id: nanoid(3),
-              height: bbox.height + padding * 2,
-              width: bbox.width + padding * 2,
-              points: bbox.points,
-              stroke: stroke,
-              strokeWidth: strokeWidth,
-              x: bbox.x,
-              y: bbox.y,
-              tension: 0.5,
-              rotation: 0,
-            });
-          }
-          setHistoryIdx(historyIdx + 1);
-        } else if (tool === "eraser") {
-          console.log(line?.points, "line");
+        // padding 추가 (선택하기 쉽게)
+        const padding = 10;
+        if (line) {
+          const bbox = getLineBoundingBox(line.points);
+          addShape({
+            type: "line",
+            id: nanoid(3),
+            height: bbox.height + padding * 2,
+            width: bbox.width + padding * 2,
+            points: bbox.points,
+            stroke: stroke,
+            strokeWidth: strokeWidth,
+            x: bbox.x,
+            y: bbox.y,
+            tension: 0.5,
+            rotation: 0,
+            isEraser: tool === "eraser",
+          });
         }
+        setHistoryIdx(historyIdx + 1);
       }
 
       setLine(undefined);

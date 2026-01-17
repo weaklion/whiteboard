@@ -9,6 +9,9 @@ import { LineShape, TextShape } from "@/entities/shape";
 import { useToolStore } from "@/features/canvas-tools";
 import { useSelectionStore } from "@/features/canvas-selection";
 import { Eraser, Pencil, Pointer, Type } from "lucide-react";
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:3001");
 
 export const Canvas = () => {
   const [line, setLine] = useState<{ points: number[] }>();
@@ -30,6 +33,18 @@ export const Canvas = () => {
   const isDrawing = useRef(false);
 
   const visibleShape = shapes.slice(0, historyIdx);
+
+  useEffect(() => {
+    socket.emit("join-room", "1");
+
+    socket.on("draw", (shape) => {
+      addShape(shape);
+    });
+
+    return () => {
+      socket.off("draw");
+    };
+  }, [addShape]);
 
   useEffect(() => {
     if (selectedIds.length && transformerRef.current) {
@@ -108,16 +123,18 @@ export const Canvas = () => {
           setLine({ points: [pos.x, pos.y] });
         } else if (tool === "text") {
           const id = nanoid(3);
-          addShape({
+          const newShape = {
             id: id,
-            type: "text",
+            type: "text" as const,
             height: 48,
             width: 200,
             x: pos.x,
             y: pos.y,
             value: "text를 입력 해주세요",
             rotation: 0,
-          });
+          };
+          addShape(newShape);
+          socket.emit("draw", { roomId: "1", shape: newShape });
           setSelectedIds([id]);
           setHistoryIdx(historyIdx + 1);
 
@@ -189,8 +206,8 @@ export const Canvas = () => {
         const padding = 10;
         if (line) {
           const bbox = getLineBoundingBox(line.points);
-          addShape({
-            type: "line",
+          const newShape = {
+            type: "line" as const,
             id: nanoid(3),
             height: bbox.height + padding * 2,
             width: bbox.width + padding * 2,
@@ -202,7 +219,10 @@ export const Canvas = () => {
             tension: 0.5,
             rotation: 0,
             isEraser: tool === "eraser",
-          });
+          };
+          addShape(newShape);
+          socket.emit("draw", { roomId: "1", shape: newShape });
+          
         }
         setHistoryIdx(historyIdx + 1);
       }

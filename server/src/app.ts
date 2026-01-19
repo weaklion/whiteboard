@@ -45,8 +45,19 @@ io.on("connection", (socket) => {
     socket.emit("joined-room", roomId);
   });
 
-  socket.on("draw", (data) => {
+  socket.on("drawing", (data) => {
     const { roomId, shape } = data;
     socket.to(roomId).emit("draw", shape);
   });
+
+  socket.on("drawing-start", (data) => {
+    const { roomId, shape } = data;
+    socket.to(roomId).emit("drawing-start", shape);
+  })
+
+  socket.on("drawing-end", (data) => {
+    const { roomId, shape } = data;
+    socket.to(roomId).emit("drawing-end", shape);
+  })
+
 });

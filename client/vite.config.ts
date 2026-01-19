@@ -33,6 +33,10 @@ export default defineConfig({
         find: "@widgets",
         replacement: path.resolve(__dirname, "src/widgets"),
       },
+      {
+        find: "@root",
+        replacement: path.resolve(__dirname, ".."),
+      },
     ],
   },
 });

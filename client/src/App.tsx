@@ -19,10 +19,7 @@ function App() {
       setReplyMessage(data);
     })
 
-    socket.emit("reply", 'wowowow')
-
   
-
     return () => {
       socket.off("connect");
       socket.off("disconnect");

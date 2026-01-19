@@ -5,3 +5,4 @@ export {
   getCorner,
   getLineBoundingBox,
 } from "./canvas-tools.lib";
+export { useCanvasDrawing } from "./models/useCanvasDrawing";

@@ -5,16 +5,17 @@ import { Eraser, Pencil, Pointer, Type } from "lucide-react";
 
 import { useRoomConnection } from "@/features/room";
 import { useCanvasDrawing, useToolStore } from "@/features/canvas-tools";
+import { useDraftStore } from "@/entities/draft";
 import { useCanvasSelection, useSelectionStore } from "@/features/canvas-selection";
 import { useShapeStore, LineShape, TextShape } from "@/entities/shape";
 
 export const Whiteboard = () => {
   const { socket } = useRoomConnection("1");
-  
+  const drafts = useDraftStore((state) => state.drafts);
+
   const { shapes } = useShapeStore();
-  const { tool, setTool } = useToolStore();
+  const { tool, actions : { setTool } } = useToolStore();
   const { 
-    selectedIds, 
     setSelectedIds, 
     historyIdx, 
     setHistoryIdx 
@@ -22,7 +23,9 @@ export const Whiteboard = () => {
   
   const shapeRefs = useRef<Map<string, Konva.Node>>(new Map());
 
-  const drawing = useCanvasDrawing({
+  const { 
+    ...drawing
+  } = useCanvasDrawing({
     socket,
     historyIdx,
     setHistoryIdx,
@@ -119,20 +122,18 @@ export const Whiteboard = () => {
                 />
               ))
           )}
-          {drawing.line && (
+
+          {Array.from(drafts.entries()).map(([id, draft]) => (
             <Line
-              points={drawing.line.points}
-              stroke="#df4b26"
+              key={id}
+              points={draft.points}
+              stroke={draft.color}
               strokeWidth={5}
               tension={0.5}
               lineCap="round"
               lineJoin="round"
-              hitStrokeWidth={50}
-              globalCompositeOperation={
-                tool === "eraser" ? "destination-out" : "source-over"
-              }
             />
-          )}
+          ))}
 
           {tool === "default" && (
             <>

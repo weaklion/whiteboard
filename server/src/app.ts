@@ -44,20 +44,13 @@ io.on("connection", (socket) => {
     console.log(`User ${socket.id} joined room ${roomId}`);
     socket.emit("joined-room", roomId);
   });
-
   socket.on("drawing", (data) => {
+    const { roomId, shape } = data;
+    socket.to(roomId).emit("drawing", shape);
+  });
+  socket.on("draw", (data) => {
     const { roomId, shape } = data;
     socket.to(roomId).emit("draw", shape);
   });
-
-  socket.on("drawing-start", (data) => {
-    const { roomId, shape } = data;
-    socket.to(roomId).emit("drawing-start", shape);
-  })
-
-  socket.on("drawing-end", (data) => {
-    const { roomId, shape } = data;
-    socket.to(roomId).emit("drawing-end", shape);
-  })
 
 });

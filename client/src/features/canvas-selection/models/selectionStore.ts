@@ -10,9 +10,12 @@ interface SelectionStore {
     x2: number;
     y2: number;
   };
-  setHistoryIdx: (idx: number) => void;
-  setSelectedIds: (ids: string[]) => void;
-  setSelectionRectangle: (rect: SelectionStore["selectionRectangle"]) => void;
+  actions : {
+
+    setHistoryIdx: (idx: number) => void;
+    setSelectedIds: (ids: string[]) => void;
+    setSelectionRectangle: (rect: SelectionStore["selectionRectangle"]) => void;
+  }
 }
 
 export const useSelectionStore = create<SelectionStore>((set) => ({
@@ -25,7 +28,10 @@ export const useSelectionStore = create<SelectionStore>((set) => ({
     x2: 0,
     y2: 0,
   },
+  actions : {
   setHistoryIdx: (historyIdx) => set({ historyIdx }),
   setSelectedIds: (selectedIds) => set({ selectedIds }),
   setSelectionRectangle: (selectionRectangle) => set({ selectionRectangle }),
+
+  }
 }));

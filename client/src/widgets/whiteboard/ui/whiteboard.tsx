@@ -16,10 +16,12 @@ export const Whiteboard = () => {
   const { shapes } = useShapeStore();
   const { tool, actions : { setTool } } = useToolStore();
   const { 
+    actions : {
     setSelectedIds, 
-    historyIdx, 
     setHistoryIdx 
-  } = useSelectionStore();
+    },
+    historyIdx, 
+  } = useSelectionStore((state) => state);
   
   const shapeRefs = useRef<Map<string, Konva.Node>>(new Map());
 

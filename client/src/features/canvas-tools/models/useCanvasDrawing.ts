@@ -2,10 +2,11 @@ import { useRef } from "react";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { nanoid } from "nanoid";
 import { useToolStore } from "./toolStore";
-import { useShapeStore } from "@/entities/shape";
 import { getLineBoundingBox } from "../canvas-tools.lib";
 import { Socket } from "socket.io-client";
 import { useDraftStore } from "@/entities/draft";
+import { useShapeStore } from "@/entities/shape";
+import { useSelectionStore } from "@/features/canvas-selection";
 
 interface UseCanvasDrawingProps {
   socket?: Socket;
@@ -17,8 +18,6 @@ interface UseCanvasDrawingProps {
 
 export const useCanvasDrawing = ({
   socket,
-  historyIdx,
-  setHistoryIdx,
   setSelectedIds,
   setTool,
 }: UseCanvasDrawingProps) => {
@@ -26,8 +25,9 @@ export const useCanvasDrawing = ({
   const currentLineId = useRef<string | undefined>(undefined);
   
   const { tool, stroke, strokeWidth } = useToolStore();
+  const { actions : {updateDraft}, drafts } = useDraftStore();
   const { addShape } = useShapeStore();
-  const { updateDraft, removeDraft } = useDraftStore((state) => state.actions);
+  const { actions : {setHistoryIdx}, historyIdx } = useSelectionStore();
 
   const handleMouseDown = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (tool === "default") return;
@@ -65,13 +65,10 @@ export const useCanvasDrawing = ({
         value: "text를 입력 해주세요",
         rotation: 0,
       };
-      
-      // Text creates immediately
       addShape(newShape);
+      setHistoryIdx(historyIdx + 1);
       socket?.emit("draw", { roomId: "1", shape: newShape });
       setSelectedIds([id]);
-      setHistoryIdx(historyIdx + 1);
-
       setTool("default");
     }
   };
@@ -82,11 +79,11 @@ export const useCanvasDrawing = ({
     const stage = e.target.getStage();
     const point = stage?.getPointerPosition();
     if (point && currentLineId.current) {
-        // We need to know previous points to concat.
-        const currentDraft = useDraftStore.getState().drafts.get(currentLineId.current!);
+
+        const currentDraft = drafts.get(currentLineId.current!);
         if (currentDraft) {
             const points = currentDraft.points.concat([point.x, point.y]);
-            updateDraft(currentLineId.current!, { points, color: stroke });
+            updateDraft(currentLineId.current, { points, color: stroke });
 
             socket?.emit("drawing", { 
                 roomId: "1", 
@@ -105,7 +102,7 @@ export const useCanvasDrawing = ({
     if (tool !== "default" && isDrawing.current) {
       const padding = 10;
       if (currentLineId.current) {
-        const currentDraft = useDraftStore.getState().drafts.get(currentLineId.current);
+        const currentDraft = drafts.get(currentLineId.current);
         if (currentDraft) {
             const bbox = getLineBoundingBox(currentDraft.points);
             const newShape = {
@@ -122,14 +119,12 @@ export const useCanvasDrawing = ({
             rotation: 0,
             isEraser: tool === "eraser",
             };
-            
             socket?.emit("drawing-end", { roomId: "1", shape: { id: currentLineId.current } });
             socket?.emit("draw", { roomId: "1", shape: newShape });
             addShape(newShape);
+            setHistoryIdx(historyIdx + 1);  
         }
-        removeDraft(currentLineId.current);
       }
-      setHistoryIdx(historyIdx + 1);
     }
 
     currentLineId.current = undefined;

@@ -1,4 +1,6 @@
 
+
+
 export interface ShapeType {
   id: string;
   x: number;
@@ -26,3 +28,5 @@ export interface ShapeText extends ShapeType {
   lineHeight?: number;
   link?: string;
 }
+
+export type Shape = ShapeText | ShapeLine;

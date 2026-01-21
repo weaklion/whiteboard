@@ -16,9 +16,12 @@ export const useCanvasSelection = ({
 }: UseCanvasSelectionProps) => {
   const {
     selectedIds,
-    setSelectedIds,
     selectionRectangle,
+    actions : {
+    setSelectedIds,
     setSelectionRectangle,
+
+    }
   } = useSelectionStore();
   
   const { shapes } = useShapeStore();

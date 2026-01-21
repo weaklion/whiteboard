@@ -48,17 +48,10 @@ pnpm dev:server   # 서버만
 
 - ✅ 실시간 다중 사용자 협업
 - ✅ 브러시/지우개/텍스트 도구
-- ✅ URL 기반 방 공유
+- ✅ URL 기반 방 공유(진행중)
 - ✅ Undo/Redo 기능
 - ✅ Shape 변형 및 드래그
 - ✅ 실시간 유저 수 표시
-
-## 🔗 방 공유하기
-
-1. 앱 실행 후 "Create New Room" 클릭
-2. 상단의 "Share Room" 버튼으로 URL 복사
-3. 친구에게 URL 공유
-4. 같은 방에서 실시간 협업!
 
 ## 📝 사용 가능한 스크립트
 
@@ -87,6 +80,8 @@ pnpm install          # 모든 의존성 설치 (루트, client, server)
 - Socket.IO Client
 - Vite
 - Tailwind CSS + DaisyUI
+- Lucide React (아이콘)
+- Nanoid (ID 생성)
 
 ### 서버
 - Node.js
@@ -98,46 +93,32 @@ pnpm install          # 모든 의존성 설치 (루트, client, server)
 - pnpm (패키지 관리자)
 - pnpm workspaces (모노레포)
 
-## 🔧 환경 변수
+## 📚 구현 상세 (Implementation Details)
 
-서버 설정은 `server/.env` 파일에서 관리:
+### 1. 선 (Line)
+- **데이터 구조**: `ShapeLine` 인터페이스(`points`, `stroke`, `strokeWidth` 등)를 사용하여 관리합니다.
+- **렌더링**: `react-konva`의 `Line` 컴포넌트를 사용하여 캔버스에 그립니다.
+- **로직**: `useCanvasDrawing` 훅을 통해 마우스 이벤트를 감지합니다. 드래그 중에는 `DraftStore`에 임시 데이터를 저장하여 빠른 반응성을 확보하고, 드래그가 끝나면 `ShapeStore`에 저장 및 `socket`을 통해 서버로 전송합니다.
 
-```env
-PORT=3000
-CLIENT_URL=http://localhost:5173
-```
+### 2. 텍스트 (Text)
+- **데이터 구조**: `ShapeText` 인터페이스(`x`, `y`, `value`, `fontSize` 등)를 사용하여 관리합니다.
+- **렌더링**: `TextShape` 컴포넌트를 사용하며, 내부적으로 `EditableText`를 통해 편집 기능을 제공합니다.
+- **로직**: 텍스트 도구 선택 후 클릭 시 생성됩니다. `Html` 컴포넌트(react-konva-utils)를 활용하거나 HTML overlay 방식을 사용하여 캔버스 위에서 직접 타이핑이 가능하도록 구현되어 있습니다.
 
-## 🧪 네트워크 테스트 (다른 컴퓨터)
+### 3. 선택 (Selection)
+- **데이터 구조**: `SelectionStore`를 통해 선택된 도형들의 ID 배열(`selectedIds`)을 관리합니다.
+- **렌더링**: 선택된 도형 주위에 `Konva.Transformer`를 부착하여 크기 조절 및 회전 핸들을 표시합니다.
+- **로직**: `useCanvasSelection` 훅이 담당합니다.
+    - **클릭 선택**: 단일 도형 선택 또는 Shift/Ctrl 키를 이용한 다중 선택.
+    - **드래그 선택**: 마우스 드래그로 사각형 영역을 만들고, `Konva.Util.haveIntersection`을 사용하여 해당 영역 교차하는 모든 도형을 선택합니다.
 
-1. 서버 IP 확인
-```bash
-# Windows
-ipconfig
-
-# Mac/Linux
-ifconfig
-```
-
-2. `client/src/services/socketService.ts` 수정
-```typescript
-socketService.connect("http://YOUR_IP:3000");
-```
-
-3. 친구에게 URL 공유
-```
-http://YOUR_IP:5173?room=abc123
-```
 
 ## 🚧 향후 계획
 
 - [ ] Shape 업데이트 동기화 (드래그, 변형)
 - [ ] 지우개 기능 개선 (Layer 합성 방식)
-- [ ] 커서 위치 실시간 공유
 - [ ] 색상/두께 선택 UI
 - [ ] 공통 타입 패키지 분리
-- [ ] Redis 캐싱
-- [ ] DB 영구 저장
-- [ ] 사용자 인증
 
 ## 📄 라이선스
 

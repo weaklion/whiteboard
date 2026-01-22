@@ -5,7 +5,6 @@ import { useToolStore } from "./toolStore";
 import { getLineBoundingBox } from "../canvas-tools.lib";
 import { Socket } from "socket.io-client";
 import { useDraftStore } from "@/entities/draft";
-import { useShapeStore } from "@/entities/shape";
 import { useSelectionStore } from "@/features/canvas-selection";
 
 interface UseCanvasDrawingProps {
@@ -26,8 +25,9 @@ export const useCanvasDrawing = ({
   
   const { tool, stroke, strokeWidth } = useToolStore();
   const { actions : {updateDraft}, drafts } = useDraftStore();
-  const { addShape } = useShapeStore();
-  const { actions : {setHistoryIdx}, historyIdx } = useSelectionStore();
+  // removed addShape from imports as we rely on server sync
+  // const { addShape } = useShapeStore(); 
+  // removed setHistoryIdx since server updates it
 
   const handleMouseDown = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (tool === "default") return;
@@ -65,8 +65,11 @@ export const useCanvasDrawing = ({
         value: "text를 입력 해주세요",
         rotation: 0,
       };
-      addShape(newShape);
-      setHistoryIdx(historyIdx + 1);
+      
+      // Removed local addShape and setHistoryIdx
+      // addShape(newShape);
+      // setHistoryIdx(historyIdx + 1);
+      
       socket?.emit("draw", { roomId: "1", shape: newShape });
       setSelectedIds([id]);
       setTool("default");
@@ -121,8 +124,10 @@ export const useCanvasDrawing = ({
             };
             socket?.emit("drawing-end", { roomId: "1", shape: { id: currentLineId.current } });
             socket?.emit("draw", { roomId: "1", shape: newShape });
-            addShape(newShape);
-            setHistoryIdx(historyIdx + 1);  
+            
+            // Removed local state updates
+            // addShape(newShape);
+            // setHistoryIdx(historyIdx + 1);  
         }
       }
     }

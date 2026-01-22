@@ -1,4 +1,4 @@
-import type { ShapeText } from "../model/shapeType";
+import type { ShapeText } from "@root/types/shape";
 import { EditableText } from "@/shared/ui/editableText";
 import type { RefObject } from "react";
 import type Konva from "konva";

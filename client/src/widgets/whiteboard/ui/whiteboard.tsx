@@ -61,14 +61,19 @@ export const Whiteboard = () => {
     selection.handleMouseUp();
   };
 
+
+  const handleEditing = () => {
+    setSelectedIds([])
+  }
+
   const handleUndo = () => {
-    if (historyIdx === 0) return;
-    setHistoryIdx(historyIdx - 1);
+    // Rely on server, wait for update
+    socket?.emit("undo", "1");
   };
 
   const handleRedo = () => {
-    if (historyIdx === shapes.length) return;
-    setHistoryIdx(historyIdx + 1);
+    // Rely on server, wait for update
+    socket?.emit("redo", "1");
   };
 
   return (
@@ -120,7 +125,7 @@ export const Whiteboard = () => {
                   data={shape}
                   key={shape.id}
                   shapeRefs={shapeRefs}
-                  onEditing={() => setSelectedIds([])}
+                  onEditing={() => handleEditing}
                 />
               ))
           )}

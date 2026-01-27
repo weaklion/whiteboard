@@ -139,6 +139,9 @@ export const Whiteboard = () => {
               tension={0.5}
               lineCap="round"
               lineJoin="round"
+              globalCompositeOperation={
+                draft.isEraser ? "destination-out" : "source-over"
+              }
             />
           ))}
 

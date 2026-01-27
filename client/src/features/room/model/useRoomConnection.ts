@@ -1,13 +1,9 @@
-import { useEffect, useRef } from "react";
-import { io, Socket } from "socket.io-client";
+import { useEffect } from "react";
+import { io } from "socket.io-client";
 import { useShapeStore } from "@/entities/shape";
 import { useDraftStore } from "@/entities/draft";
 import { useSelectionStore } from "@/features/canvas-selection";
 
-// Initialize socket outside to prevent reconnection on every render if possible, 
-// but inside hook with ref is safer for roomId changes. 
-// Given previous code had it outside (Step 56), but inside useEffect it was re-emitting join-room.
-// I'll keep the socket instance stable.
 const socket = io("http://localhost:3001");
 
 export const useRoomConnection = (roomId: string) => {
@@ -43,13 +39,13 @@ export const useRoomConnection = (roomId: string) => {
     // Real-time drafting (other users drawing)
     socket.on("drawing-start", (shape) => {
       if (shape.id) {
-        updateDraft(shape.id, { points: shape.points, color: shape.stroke });
+        updateDraft(shape.id, { points: shape.points, color: shape.stroke, isEraser: shape.isEraser });
       }
     });
 
     socket.on("drawing", (shape) => {
       if (shape.id) {
-        updateDraft(shape.id, { points: shape.points, color: shape.stroke });
+        updateDraft(shape.id, { points: shape.points, color: shape.stroke, isEraser: shape.isEraser });
       }
     });
 

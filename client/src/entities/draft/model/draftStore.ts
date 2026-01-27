@@ -3,6 +3,7 @@ import { create } from 'zustand';
 interface Draft {
   points: number[];
   color: string;
+  isEraser?: boolean;
 }
 
 interface DraftStore {

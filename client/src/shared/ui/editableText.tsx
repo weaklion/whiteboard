@@ -70,7 +70,7 @@ const TextEditor = ({
 
         textarea.focus();
 
-        const handleOutsideClick = (e: PointerEvent) => {
+        const handleOutsideClick = (e: MouseEvent) => {
           if (e.target !== textarea) {
             onChange(textarea.value);
             onClose();

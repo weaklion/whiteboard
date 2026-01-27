@@ -1,4 +1,4 @@
-import type { ShapeLine } from "../model/shapeType";
+import type { ShapeLine } from "@root/types/shape"; 
 import { type RefObject } from "react";
 import { useShapeStore } from "../model/shapeStore";
 import type Konva from "konva";

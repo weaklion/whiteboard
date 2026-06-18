@@ -54,6 +54,16 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("drawing", shape);
   });
 
+  socket.on("drawing-start", (data) => {
+    const { roomId, shape } = data;
+    socket.to(roomId).emit("drawing-start", shape);
+  });
+
+  socket.on("drawing-end", (data) => {
+    const { roomId, shape } = data;
+    socket.to(roomId).emit("drawing-end", shape);
+  });
+
   socket.on("draw", (data) => {
     const { roomId, shape } = data;
     const room = getRoomData(roomId);

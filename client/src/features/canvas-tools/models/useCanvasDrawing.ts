@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { nanoid } from "nanoid";
-import { useToolStore } from "./toolStore";
+import { useToolStore, type Tool } from "./toolStore";
 import { getLineBoundingBox } from "../canvas-tools.lib";
 import { Socket } from "socket.io-client";
 import { useDraftStore } from "@/entities/draft";
@@ -12,7 +12,7 @@ interface UseCanvasDrawingProps {
   historyIdx: number;
   setHistoryIdx: (idx: number) => void;
   setSelectedIds: (ids: string[]) => void;
-  setTool: (tool: any) => void;
+  setTool: (tool: Tool) => void;
 }
 
 export const useCanvasDrawing = ({
@@ -24,7 +24,7 @@ export const useCanvasDrawing = ({
   const currentLineId = useRef<string | undefined>(undefined);
   
   const { tool, stroke, strokeWidth } = useToolStore();
-  const { actions : {updateDraft}, drafts } = useDraftStore();
+  const { actions: { updateDraft, removeDraft }, drafts } = useDraftStore();
 
 
   const handleMouseDown = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
@@ -38,7 +38,8 @@ export const useCanvasDrawing = ({
       const id = nanoid(3);
       currentLineId.current = id;
       
-      const newDraft = { points: [pos.x, pos.y], color: stroke };
+      const isEraser = tool === "eraser";
+      const newDraft = { points: [pos.x, pos.y], color: stroke, isEraser };
       updateDraft(id, newDraft);
 
       socket?.emit("drawing-start", { 
@@ -47,7 +48,8 @@ export const useCanvasDrawing = ({
           id, 
           points: [pos.x, pos.y], 
           stroke, 
-          strokeWidth 
+          strokeWidth,
+          isEraser,
         } 
       });
 
@@ -80,7 +82,8 @@ export const useCanvasDrawing = ({
         const currentDraft = drafts.get(currentLineId.current!);
         if (currentDraft) {
             const points = currentDraft.points.concat([point.x, point.y]);
-            updateDraft(currentLineId.current, { points, color: stroke });
+            const isEraser = tool === "eraser";
+            updateDraft(currentLineId.current, { points, color: stroke, isEraser });
 
             socket?.emit("drawing", { 
                 roomId: "1", 
@@ -88,7 +91,8 @@ export const useCanvasDrawing = ({
                 id: currentLineId.current, 
                 points, 
                 stroke, 
-                strokeWidth 
+                strokeWidth,
+                isEraser,
                 } 
             });
         }
@@ -118,6 +122,7 @@ export const useCanvasDrawing = ({
             };
             socket?.emit("drawing-end", { roomId: "1", shape: { id: currentLineId.current } });
             socket?.emit("draw", { roomId: "1", shape: newShape });
+            removeDraft(currentLineId.current);
             
             // Removed local state updates
             // addShape(newShape);

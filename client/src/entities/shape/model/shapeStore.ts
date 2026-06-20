@@ -60,11 +60,6 @@ export const useShapeStore = create<Store>((set) => ({
     })),
   syncNewShape: (shape, historyIdx) =>
     set((state) => {
-      // Truncate at historyIdx - 1 (because historyIdx includes the new shape)
-      // If historyIdx is 1, we want index 0 (slice 0,0 is empty? No slice(0,0) is empty).
-      // If historyIdx is 1, it means 1 item total. shape is at index 0.
-      // So we slice(0, 0).
-      // If historyIdx is 6 (items 0..5), we slice(0, 5).
       const newShapes = state.shapes.slice(0, historyIdx - 1);
       return {
         shapes: [...newShapes, shape],
